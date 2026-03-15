@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}Expenses Tracker{% endblock %}
+
+{% block content %}
+<style>
+/* BODY & BACKGROUND */
+body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #e8e8e8 0%, #cfd2ff 40%, #f5c9a6 100%);
+    color: #343a40;
+    padding-bottom: 50px;
+}
+
+/* HEADINGS */
+h2, h4 {
+    color: #343a40;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+/* BUTTONS */
+.btn {
+    transition: 0.3s;
+    border-radius: 8px;
+    font-weight: 500;
+}
+.btn:hover { opacity: 0.85; }
+
+/* CARDS */
+.card {
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: 0.3s;
+}
+.card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+.card .card-title { font-size: 1.2rem; font-weight: bold; }
+.card .card-text { font-size: 1rem; }
+
+/* FORM INPUTS */
+input.form-control, select.form-control {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 8px;
+    transition: 0.2s;
+}
+input.form-control:focus, select.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 5px rgba(13,110,253,0.25);
+}
+
+/* TABLE */
+table.table-responsive { overflow-x: auto; }
+table.table-striped tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+    transition: 0.2s;
+}
+
+/* ALERTS */
+.alert { border-radius: 8px; font-weight: bold; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .row.g-3 { flex-direction: column; }
+    .col-md-4, .col-md-3, .col-md-2 { width: 100%; }
+    .btn { width: 100%; margin-bottom: 5px; }
+}
+</style>
+
+<div class="container mt-5">
+
+{% if show_password %}
+    <!-- PASSWORD SCREEN -->
+    <h2>Enter Password to Access Expenses Tracker</h2>
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <input type="password" name="page_password" class="form-control mb-2" placeholder="Enter password" required>
+        <button type="submit" class="btn btn-primary w-100">Submit</button>
+    </form>
+
+{% else %}
+    <!-- MAIN EXPENSES PAGE -->
+    <h2 class="mb-4">Expenses Tracker</h2>
+    <a href="{% url 'logout' %}" class="btn btn-warning mb-3">Logout</a>
+
+    <!-- TOTAL EXPENSES -->
+    <h4>Total Expenses: ${{ total }}</h4>
+
+    <!-- CATEGORY CARDS -->
+    <h4 class="mt-4">Expenses by Category</h4>
+    <div class="row mb-4">
+        {% for cat in categories %}
+        <div class="col-12 col-sm-6 col-md-3 mb-3">
+            <div class="card text-white bg-primary h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ cat.category }}</h5>
+                    <p class="card-text">Total: ${{ cat.total_amount }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ADD / EDIT FORM -->
+    <form method="post" class="row g-3 mb-4">
+        {% csrf_token %}
+        <input type="hidden" name="expense_id" id="expense_id">
+        <div class="col-12 col-md-4">
+            <input type="text" class="form-control" name="title" id="title" placeholder="Title" required>
+        </div>
+        <div class="col-12 col-md-2">
+            <input type="number" step="0.01" class="form-control" name="amount" id="amount" placeholder="Amount" required>
+        </div>
+        <div class="col-12 col-md-3">
+            <input type="text" class="form-control" name="category" id="category" placeholder="Enter category" required>
+        </div>
+        <div class="col-12 col-md-3 d-flex gap-2 flex-wrap">
+            <button type="submit" name="add_expense" class="btn btn-success flex-grow-1" id="submitBtn">Add Expense</button>
+            <button type="submit" name="edit_expense" class="btn btn-primary flex-grow-1 d-none" id="updateBtn">Update Expense</button>
+            <button type="button" class="btn btn-secondary flex-grow-1" id="cancelEditBtn" style="display:none;">Cancel</button>
+        </div>
+    </form>
+
+    <!-- EXPENSES TABLE -->
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Amount</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.title }}</td>
+                    <td>${{ expense.amount }}</td>
+                    <td>{{ expense.category }}</td>
+                    <td>{{ expense.date }}</td>
+                    <td class="d-flex flex-wrap gap-1">
+                        <button class="btn btn-primary btn-sm editBtn flex-grow-1"
+                                data-id="{{ expense.id }}" 
+                                data-title="{{ expense.title }}" 
+                                data-amount="{{ expense.amount }}" 
+                                data-category="{{ expense.category }}">Edit</button>
+                        <form method="post" class="flex-grow-1">
+                            {% csrf_token %}
+                            <input type="hidden" name="expense_id" value="{{ expense.id }}">
+                            <button type="submit" name="delete_expense" class="btn btn-danger btn-sm w-100">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+<script>
+const editButtons = document.querySelectorAll('.editBtn');
+const expenseIdInput = document.getElementById('expense_id');
+const titleInput = document.getElementById('title');
+const amountInput = document.getElementById('amount');
+const categoryInput = document.getElementById('category');
+const submitBtn = document.getElementById('submitBtn');
+const updateBtn = document.getElementById('updateBtn');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+editButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        expenseIdInput.value = btn.dataset.id;
+        titleInput.value = btn.dataset.title;
+        amountInput.value = btn.dataset.amount;
+        categoryInput.value = btn.dataset.category;
+
+        submitBtn.classList.add('d-none');
+        updateBtn.classList.remove('d-none');
+        cancelEditBtn.style.display = 'inline-block';
+    });
+});
+
+cancelEditBtn.addEventListener('click', () => {
+    expenseIdInput.value = '';
+    titleInput.value = '';
+    amountInput.value = '';
+    categoryInput.value = '';
+
+    submitBtn.classList.remove('d-none');
+    updateBtn.classList.add('d-none');
+    cancelEditBtn.style.display = 'none';
+});
+</script>
+
+{% endif %}
+</div>
+{% endblock %}

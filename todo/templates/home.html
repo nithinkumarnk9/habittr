@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Daily Journal{% endblock %}
+
+{% block content %}
+<style>
+body {
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(135deg, #e8e8e8 0%, #cfd2ff 40%, #f5c9a6 100%);
+    font-family: Arial, sans-serif;
+}
+
+/* Card styles */
+.card {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    transition: 0.3s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* Note text */
+.note-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Category badge */
+.category-badge {
+    font-size: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-body h5 {
+        font-size: 1rem;
+    }
+    .btn {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .note-text {
+        -webkit-line-clamp: 4;
+    }
+}
+
+@media (max-width: 576px) {
+    .note-text {
+        -webkit-line-clamp: 5;
+    }
+}
+</style>
+
+<div class="container mt-4">
+
+    <h2 class="text-center mb-4">📝 My Notes</h2>
+
+    <!-- SEARCH -->
+    <form method="GET" class="mb-3">
+        <div class="input-group">
+            <input type="text" name="search" class="form-control" placeholder="Search notes">
+            <button class="btn btn-primary">Search</button>
+        </div>
+    </form>
+
+    <!-- ADD NOTE -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+
+                <input type="text" name="title" class="form-control mb-2" placeholder="Note Title" required>
+
+                <textarea name="content" class="form-control mb-2" placeholder="Write your note" required></textarea>
+
+                <!-- USER CATEGORY INPUT -->
+                <input type="text" name="category" class="form-control mb-2" placeholder="Enter category" required>
+
+                <button class="btn btn-success w-100">Add Note</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOTES GRID -->
+    <div class="row g-3">
+        {% for note in notes %}
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <h5>{{ note.title }}</h5>
+
+                    {% if note.category %}
+                    <span class="badge bg-secondary mb-2 category-badge">{{ note.category }}</span>
+                    {% endif %}
+
+                    <p class="note-text mt-2">{{ note.content }}</p>
+
+                    <!-- BUTTONS -->
+                    <div class="d-flex flex-wrap gap-1">
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#read{{ note.id }}">
+                            Read
+                        </button>
+
+                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#edit{{ note.id }}">
+                            Edit
+                        </button>
+
+                        <form method="POST" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="{{ note.id }}">
+                            <button class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- READ MODAL -->
+        <div class="modal fade" id="read{{ note.id }}">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5>{{ note.title }}</h5>
+                        <button class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% if note.category %}
+                        <b>Category:</b> {{ note.category }} <br><br>
+                        {% endif %}
+                        {{ note.content }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% endfor %}
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
